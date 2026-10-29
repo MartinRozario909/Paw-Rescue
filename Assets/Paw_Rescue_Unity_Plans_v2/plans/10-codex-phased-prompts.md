@@ -45,9 +45,11 @@ simulation and mark physical Android validation pending until device tested.
 
 ## Prompt 04 — Kenney-inspired player + camera
 ```text
-Execute plans/04-player-camera.md and consult source audit. Implement Unity
-CharacterController with camera-relative acceleration, explicit gravity,
-double jump, buffer/coyote/variable height, smooth mesh facing and reset.
+Execute plans/04-player-camera.md and consult source audit. Implement the
+player with a dynamic Rigidbody (gravity from Project Settings, -25) and a
+BoxCollider (zero-friction material); no CharacterController. Read input in
+Update, set Rigidbody.linearVelocity in FixedUpdate with camera-relative
+acceleration, double jump, buffer/variable height, MoveRotation facing and reset.
 Use Cinemachine 3 Orbit/OrbitalFollow with one input owner; desktop mouse and
 mobile drag share orbit state. Verify speed/units are NOT Godot frame-dependent
 values. Playtest movement, double jump, pitch clamp and camera orbit in graybox.

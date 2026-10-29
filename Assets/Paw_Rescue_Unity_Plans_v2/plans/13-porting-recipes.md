@@ -6,11 +6,11 @@
 
 | Godot source | Unity translation | Important distinction |
 |---|---|---|
-| `CharacterBody3D.velocity; move_and_slide()` | `CharacterController.Move(displacement)` | Unity CC expects **displacement** and does **not** apply gravity |
+| `CharacterBody3D.velocity; move_and_slide()` | Dynamic `Rigidbody` + `BoxCollider`; set `Rigidbody.linearVelocity` in `FixedUpdate` | The physics engine moves the body and handles collisions; Rigidbody gravity is applied automatically |
 | `Input.get_axis(move_left, move_right)` | Input Action `Move.ReadValue<Vector2>()` | Map `x=horizontal`, `y=forward`; in Unity XZ is horizontal plane |
 | `input.rotated(Vector3.UP, view.rotation.y)` | `camRightXZ*x + camForwardXZ*y` | Prevent diagonal multiplier >1; camera yaw only |
-| `movement_velocity=input*250*delta` | `targetPlanarVelocity = direction*speed` | In Unity `speed` is units/sec; apply `dt` **only to Move displacement** |
-| `gravity+=25*delta; y=-gravity` | `verticalSpeed += gravity*dt; motion.y=verticalSpeed` | Unity gravity negative; jump is positive impulse |
+| `movement_velocity=input*250*delta` | `targetPlanarVelocity = direction*speed` | In Unity `speed` is units/sec and is written as a velocity; don't multiply it by `dt` |
+| `gravity+=25*delta; y=-gravity` | Project Settings > Physics > Gravity = `(0,-25,0)`; Rigidbody `useGravity = true` | No gravity in code; jump sets `velocity.y = sqrt(2*h*-Physics.gravity.y)` |
 | `lerp_angle` | `Mathf.MoveTowardsAngle` or damped rotate visual yaw | Only character model should face travel; camera target stays stable |
 | `lerp(…,delta*10)` | `alpha=1-exp(-lambda*dt)` | Avoid unstable factor >1 on huge frame spikes |
 | Godot GPU particles | Unity `ParticleSystem` | Material, emission rate, bursts and simulation space need Unity setup |
@@ -18,26 +18,38 @@
 | `get_tree().reload_current_scene()` | `GameManager.Fail(); ResetRun()` | Scene stays loaded as required |
 | `queue_free()` disappearing platforms/coins | `SetActive(false)`/hide and `IResettable` restore | Clear all run state when retrying |
 
-## B. Camera-relative movement algorithm (C# pseudocode)
+## B. Camera-relative movement algorithm with Rigidbody (C# pseudocode)
 ```csharp
-Vector2 input = Vector2.ClampMagnitude(inputReader.Move, 1f);
-Vector3 f = Vector3.ProjectOnPlane(mainCamera.transform.forward, Vector3.up).normalized;
-Vector3 r = Vector3.ProjectOnPlane(mainCamera.transform.right, Vector3.up).normalized;
-Vector3 direction = Vector3.ClampMagnitude(f * input.y + r * input.x, 1f);
-Vector3 targetVelocity = direction * moveSpeed;
-float accel = grounded ? groundAcceleration : airAcceleration;
-planarVelocity = Vector3.MoveTowards(planarVelocity, targetVelocity, accel * dt);
-verticalSpeed += gravity * dt;
-CollisionFlags flags = controller.Move((planarVelocity + Vector3.up * verticalSpeed) * dt);
-// Evaluate landed transition using previous grounded state and downward speed;
-// keep one CharacterController.Move per frame and update jump state afterwards.
+// Update: read input only (presses are kept until FixedUpdate uses them)
+moveInput = ReadMove();
+if (jumpPressedThisFrame) jumpBufferTimer = jumpBufferTime;
+
+// FixedUpdate: physics
+float dt = Time.fixedDeltaTime;
+Vector3 velocity = rb.linearVelocity;
+grounded = GroundCheck();                       // thin OverlapBox under the BoxCollider
+if (grounded && velocity.y <= 0.01f) jumpsUsed = 0;
+
+Vector2 input = Vector2.ClampMagnitude(moveInput, 1f);
+Vector3 f = Vector3.ProjectOnPlane(cam.forward, Vector3.up).normalized;
+Vector3 r = Vector3.ProjectOnPlane(cam.right, Vector3.up).normalized;
+Vector3 target = Vector3.ClampMagnitude(f * input.y + r * input.x, 1f) * runSpeed;
+Vector3 planar = new Vector3(velocity.x, 0f, velocity.z);   // real velocity, so walls stop us
+float k = grounded ? groundResponsiveness : airResponsiveness;
+planar = Vector3.Lerp(planar, target, 1f - Mathf.Exp(-k * dt));
+
+// Jump/double jump: see section C. Gravity is NOT added here: the Rigidbody applies it.
+velocity.y = Mathf.Max(velocity.y, -maxFallSpeed);
+rb.linearVelocity = new Vector3(planar.x, velocity.y, planar.z);
+if (planar.sqrMagnitude > 0.01f)
+    rb.MoveRotation(Quaternion.RotateTowards(rb.rotation, Quaternion.LookRotation(planar), turnSpeed * dt));
 ```
-Use `CharacterController.isGrounded` after Move or an explicit ground probe for reliable contact. Clamp `verticalSpeed` to small negative when grounded; record impact velocity **before** clamping for landing FX.
+Ground check: `Physics.OverlapBoxNonAlloc` at the bottom of the BoxCollider (half-height ≈ 0.1, footprint ≈ 90% of the box), `QueryTriggerInteraction.Ignore`, skipping colliders whose `attachedRigidbody` is the player. Record the downward speed **before** landing for landing FX. Rigidbody setup: Use Gravity, Freeze Rotation, Interpolate, Continuous Dynamic. The BoxCollider uses the zero-friction `PetPhysics` material.
 
 ## C. Double jump state and jump buffering
 ```text
 OnJumpPressed:  jumpBufferTimer = 0.12
-Each Update:     jumpBufferTimer = max(0, jumpBufferTimer - dt)
+Each FixedUpdate: jumpBufferTimer = max(0, jumpBufferTimer - fixedDeltaTime)
 Grounded:        jumpsUsed=0; coyoteTimer=0.10
 Not grounded:    coyoteTimer=max(0, coyoteTimer-dt)
 CanJump when:    jumpBufferTimer>0 AND
@@ -87,7 +99,7 @@ Below threshold: disable renderer/collider/trigger (do not Destroy)
 ResetRunState: restore cached transform and enabled state; fallSpeed=0;
                triggered=false; clear effects/contacts
 ```
-**Test collision layers:** CharacterController vs animated collider, trigger must register when stepping on pad, physics signal may need a kinematic Rigidbody on moving trigger. Avoid scaled MeshCollider or nonconvex dynamic collider.
+**Test collision layers:** player dynamic Rigidbody vs the platform's kinematic Rigidbody (moved with `MovePosition` in `FixedUpdate`); the trigger must register when the player's BoxCollider steps on the pad. Avoid scaled MeshCollider or nonconvex dynamic collider.
 
 ## G. Audio pool behavior
 ```text

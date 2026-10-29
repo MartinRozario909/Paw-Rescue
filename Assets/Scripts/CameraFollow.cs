@@ -4,13 +4,14 @@ using UnityEngine.InputSystem;
 
 // Third-person orbit camera modelled on Kenney's 3D platformer starter kit (view.gd):
 // smoothly follows the pet, rotates with arrow keys, mouse drag or touch drag.
-public class CameraFollow : MonoBehaviour
+public class CameraFollow : MonoBehaviour, IResettable
 {
     [SerializeField] private Transform target;
     [SerializeField] private Vector3 targetOffset = new Vector3(0f, 0.2f, 0f);
     [SerializeField] private float distance = 8f;
     [SerializeField] private float followSmoothing = 8f;
     [SerializeField] private float rotationSmoothing = 12f;
+    [SerializeField] private float snapDistance = 10f; // Further than this from the pet, jump straight to it
 
     [Header("Rotation")]
     [SerializeField] private float keyRotationSpeed = 120f;      // Degrees per second for arrow keys
@@ -25,6 +26,9 @@ public class CameraFollow : MonoBehaviour
 
     private float yaw;
     private float pitch = 25f;
+    private float startYaw;
+    private float startPitch;
+    private bool snapToTarget;
     private float smoothYaw;
     private float smoothPitch;
     private Vector3 followPosition;
@@ -36,9 +40,19 @@ public class CameraFollow : MonoBehaviour
     void Start()
     {
         // Begin looking the same way the camera already faces in the scene
-        yaw = smoothYaw = transform.eulerAngles.y;
-        smoothPitch = pitch;
+        yaw = smoothYaw = startYaw = transform.eulerAngles.y;
+        smoothPitch = startPitch = pitch;
         if (target != null) followPosition = target.position + targetOffset;
+    }
+
+    public void ResetRunState()
+    {
+        // Snap straight back behind the pet instead of swinging across the level
+        yaw = smoothYaw = startYaw;
+        pitch = smoothPitch = startPitch;
+        lookTouchId = -1;
+        mouseDragging = false;
+        snapToTarget = true; // The pet may not have moved back yet, so snap on the next LateUpdate
     }
 
     // LateUpdate runs after the pet has moved this frame, so the camera never lags a frame behind
@@ -52,6 +66,12 @@ public class CameraFollow : MonoBehaviour
         smoothYaw = Mathf.LerpAngle(smoothYaw, yaw, 1f - Mathf.Exp(-rotationSmoothing * dt));
         smoothPitch = Mathf.Lerp(smoothPitch, pitch, 1f - Mathf.Exp(-rotationSmoothing * dt));
         followPosition = Vector3.Lerp(followPosition, target.position + targetOffset, 1f - Mathf.Exp(-followSmoothing * dt));
+        // Also snap when the pet teleports far away (respawn after a fall)
+        if (snapToTarget || (target.position + targetOffset - followPosition).sqrMagnitude > snapDistance * snapDistance)
+        {
+            followPosition = target.position + targetOffset;
+            snapToTarget = false;
+        }
 
         Quaternion rotation = Quaternion.Euler(smoothPitch, smoothYaw, 0f);
         Vector3 back = rotation * Vector3.back;

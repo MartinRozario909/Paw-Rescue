@@ -31,8 +31,12 @@
 - Unity CLI + Pipeline: https://docs.unity.com/en-us/unity-cli/unity-pipeline/unity-pipeline-package
 - Unity CLI releases/available commands: https://docs.unity.com/en-us/unity-cli/release-notes
 - Unity onboarding for third-party agent: https://unity.com/onboardingsuccess/unity-ai
-- CharacterController.Move: https://docs.unity3d.com/ScriptReference/CharacterController.Move.html
-- CharacterController.isGrounded: https://docs.unity3d.com/ScriptReference/CharacterController-isGrounded.html
+- Rigidbody: https://docs.unity3d.com/ScriptReference/Rigidbody.html
+- Rigidbody.linearVelocity: https://docs.unity3d.com/ScriptReference/Rigidbody-linearVelocity.html
+- Rigidbody interpolation: https://docs.unity3d.com/ScriptReference/Rigidbody-interpolation.html
+- Physics.OverlapBox (ground check): https://docs.unity3d.com/ScriptReference/Physics.OverlapBox.html
+- PhysicsMaterial (zero friction player): https://docs.unity3d.com/ScriptReference/PhysicsMaterial.html
+- Collider trigger events (OnTriggerEnter): https://docs.unity3d.com/ScriptReference/Collider.OnTriggerEnter.html
 - Unity Input System On-Screen controls: https://docs.unity3d.com/Packages/com.unity.inputsystem@1.13/manual/OnScreen.html (confirm installed version)
 - Unity Cinemachine Orbital Follow: https://docs.unity3d.com/Packages/com.unity.cinemachine@3.1/manual/CinemachineOrbitalFollow.html (confirm installed version)
 - Unity URP: https://docs.unity3d.com/Packages/com.unity.render-pipelines.universal@latest (confirm actual installed package)

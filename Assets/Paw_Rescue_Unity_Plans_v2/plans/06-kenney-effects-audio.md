@@ -4,7 +4,7 @@
 
 ## 1. Pet squash and stretch
 Kenney scales visual model to **(0.5, 1.5, 0.5)** when jumping, **(1.25, 0.75, 1.25)** on a fast landing, easing to **(1,1,1)** at a rate roughly `delta * 10` using lerp. The landing check uses previously-grounded flag and fall speed. Unity:
-- [ ] Store `ModelRoot` **initial scale** (might not be 1 on imported Cube Pets model). Compute squash as multiplicative factor of base scale, **never** scale CharacterController capsule.
+- [ ] Store `ModelRoot` **initial scale** (might not be 1 on imported Cube Pets model). Compute squash as multiplicative factor of base scale, **never** scale the player root, its Rigidbody or its BoxCollider.
 - [ ] On jump: apply **stylized** stretch factor (tune; Kenney reference can be exaggerated). On landing after significant downward speed: squash; spring back using exponential damping `1-exp(-lambda*dt)` (frame-rate independent).
 - [ ] Cache wasGrounded and detect first `!wasGrounded && isGrounded` transition with downward velocity threshold. Fire one landing sound and particle burst. No repeated stomps while walking.
 - [ ] Use Animator for imported actual clips, selecting Idle / Walk / Jump/Fall based on current velocity. Walk speed scales animation playback within safe range.

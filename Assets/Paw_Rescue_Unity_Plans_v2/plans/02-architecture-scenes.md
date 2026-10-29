@@ -10,7 +10,7 @@ Game
 ├── RunRoot
 │   ├── GameManager (run-state authority)
 │   ├── RunTimer
-│   ├── Player (CharacterController + camera anchor)
+│   ├── Player (Rigidbody + BoxCollider + camera anchor)
 │   └── SpawnPoint
 ├── World
 │   ├── StartGarden / BrokenCrossing / BounceGarden
@@ -36,7 +36,7 @@ Game
 | `RunResetRegistry` | list of `IResettable.ResetRunState()` instances | gameplay state |
 | `InputReader` | values/edges Move, Jump, Look, Pause | transform or physics updates |
 | `TouchLookArea` | pointer-owned right swipe deltas | move/jump binding |
-| `PlayerMotor` | CharacterController planar/vertical motion, double jump, bounce | particle artwork |
+| `PlayerMotor` (`PetController`) | Rigidbody velocity in `FixedUpdate` (Rigidbody gravity does the falling), ground check, double jump, bounce | particle artwork |
 | `PlayerVisuals` | animation, mesh rotation, squash/stretch | speed/physics calculations |
 | `OrbitCameraInput` | mouse/gamepad/touch look aggregation | follow target movement |
 | `PawStamp` | trigger, bob/spin, visual hide & reset | global stamp count |

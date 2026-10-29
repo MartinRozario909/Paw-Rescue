@@ -6,7 +6,8 @@
 | URP mobile shader/pink particle materials | Android unplayable / ugly | Verify materials in Android sample build early | Submit tested Windows build; simplify shader/particles |
 | `OnScreenStick` virtual gamepad switches `PlayerInput` scheme | Touch stick cancels / look stops | Use explicit InputReader across devices, test multi-finger | Use custom touch joystick adapter without virtual gamepad; document change |
 | Double jump + Paw Bounce trivially bypass sections | Level too easy | Measure jump range, spring height and platform placement | Increase route separation / use spatial gate, not extra mechanics |
-| Unity CC platform collision on falling surface | Player jitters/falls unexpectedly | Use stable surface collider + top trigger, avoid Parenting controller | Remove falling platform, replace with fixed bridge |
+| Player Rigidbody on moving/falling platforms | Player jitters, slides off or falls through | Platforms use kinematic Rigidbody + `MovePosition` in `FixedUpdate`; player Rigidbody Interpolate + Continuous Dynamic; don't parent the player | Remove falling platform, replace with fixed bridge |
+| Player BoxCollider snags on block seams/edges | Dog stops or hops at tile joins | Zero-friction `PetPhysics` material, overlapping ground colliders, flat seams | Slightly round the bottom with a CapsuleCollider *in addition to* the box, or merge ground colliders |
 | Touch camera event overlaps jump/pause | Mobile unplayable | One pointer owner, raycast order, three-touch physical test | Restrict look area and enlarge buttons; reduce controls |
 | Particle performance / audio pool bugs | Low FPS, crackling | Cap emission, no Instantiate each frame, pitch ranges | Keep only jump, landing, stamp bursts and footstep sound |
 | Win/Fail uses scene reload | Fails explicit requirement | `IResettable` registry, test scene handle unchanged | Simplify/reset objects, not reload |

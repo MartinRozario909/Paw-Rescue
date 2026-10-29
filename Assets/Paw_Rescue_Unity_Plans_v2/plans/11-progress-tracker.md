@@ -27,6 +27,7 @@
 |---|---|---|---|---|---|
 | Initial plan, 2026-10-28 | n/a | n/a | n/a | n/a | — |
 | 01–09 build, 2026-10-28 | none (no git repo) | Unity CLI 1.0.0-beta.13 + Pipeline: `pipeline install`, `package add com.unity.cinemachine@6.6.0`, `recompile`, `eval PawWorldBuilder.BuildAll()`, `test run`, `build run` | EditMode 6/6, PlayMode 7/7 | Play Mode captures (not kept); Player.log at `%USERPROFILE%/AppData/LocalLow/DefaultCompany/Paw World/` | Editor auto-added `com.unity.ai.assistant` + `com.unity.ai.inference` to the manifest (not requested by the plan) |
+| Physics decision, 2026-10-29 | none (no git repo) | Unity MCP `RunCommand`: removed `CharacterController` from `PetPlayer.prefab`, added a dynamic Rigidbody (gravity, freeze rotation, Interpolate, Continuous Dynamic) and a BoxCollider with `PetPhysics.physicMaterial`, set project gravity to -25 | Script-driven physics in Play Mode: lands on ground (y = -0.21), coin collected by BoxCollider, fall leads to GameOver in about 1.1 s, Retry restores the pose. **The jump was not verified**: simulated key input is ignored while the Game view is unfocused | — | **Plans updated: player physics = Rigidbody + colliders; no CharacterController.** The CharacterController rows above (phase 04) describe the earlier build |
 
 ## Mandatory regression checklist
 - [x] Start→play→fail→Retry restores input/timer/ground/platforms/particles/stamps/gate. (FullRunTests)

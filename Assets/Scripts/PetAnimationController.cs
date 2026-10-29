@@ -1,7 +1,7 @@
 using UnityEngine;
 
 [RequireComponent(typeof(PetController))]
-public class PetAnimationController : MonoBehaviour
+public class PetAnimationController : MonoBehaviour, IResettable
 {
     private static readonly int SpeedHash = Animator.StringToHash("Speed");
     private static readonly int IsGroundedHash = Animator.StringToHash("IsGrounded");
@@ -48,5 +48,12 @@ public class PetAnimationController : MonoBehaviour
     public void PlayLose()
     {
         animator.SetTrigger(LoseHash);
+    }
+
+    public void ResetRunState()
+    {
+        // Win/Lose have no way out in the Animator, so restart it from Idle
+        animator.Rebind();
+        animator.Update(0f);
     }
 }

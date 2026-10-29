@@ -1,6 +1,6 @@
 # Paw Rescue — Game Design Document
 
-**Status:** Design for development, written 2026-10-29. **This story replaces the "Pawprint Express" delivery and paw-stamp story** in `README.md` and `plans/00`–`plans/05`. The technical rules in those plans still apply: Unity 6 URP, Input System, `CharacterController`, restart without scene reload, and the three required Kenney packs.
+**Status:** Design for development, written 2026-10-29. **This story replaces the "Pawprint Express" delivery and paw-stamp story** in `README.md` and `plans/00`–`plans/05`. The technical rules in those plans still apply: Unity 6 URP, Input System, **Rigidbody and colliders for physics**, restart without scene reload, and the three required Kenney packs.
 
 **Deadline:** Sunday 2026-11-01, 23:59 Bangladesh time.
 **Style reference:** Kenney 3D Platformer Starter Kit. The game uses that kit's look and feel (a hopping character, spinning coins, a dust trail, squash and stretch, and a smooth orbit camera). It does not copy the kit's level.
@@ -34,7 +34,8 @@ Losing all 3 hearts means **Game Over**. Retry resets the level in place, withou
 |---|---|---|
 | Move | WASD, relative to the camera, with smooth acceleration | Done (`PetController`) |
 | Jump | Space. Double jump. Releasing Space early gives a short hop. A press just before landing is buffered. | Done |
-| Gravity | Custom gravity of -25 for a snappy Kenney-style arc | Done |
+| Physics body | Dynamic **Rigidbody** (gravity on, rotation frozen, Interpolate, Continuous Dynamic) and a **BoxCollider** (1.3 × 1.6 × 1.38) with the zero-friction `PetPhysics` material. The box stands on the ground, blocks walls and collects coins. | Done |
+| Gravity | Rigidbody gravity of **-25**, set in Project Settings > Physics, for a snappy Kenney-style arc | Done |
 | Camera | Follow-orbit camera. Rotate with arrow keys, mouse drag or touch drag. | Done (`CameraFollow`) |
 | Animation | Idle, Run and Jump switch instantly. Win and Lose triggers exist. | Done (`PetAnimationController`) |
 | Dust trail | Shows while grounded and running at 75% speed or more | Done (`PetTrail`) |
@@ -154,7 +155,7 @@ Rules:
 
 | Script | Responsibility | Status |
 |---|---|---|
-| `PetController` | Movement, gravity, double jump. Needs `Bounce(float)` and `Knockback(Vector3)`. | Done, needs 2 new methods |
+| `PetController` | Rigidbody movement in `FixedUpdate`, ground check, double jump (the Rigidbody does gravity). Needs `Bounce(float)` and `Knockback(Vector3)`, which set `Rigidbody.linearVelocity`. | Done, needs 2 new methods |
 | `PetAnimationController` | Animator parameters | Done |
 | `CameraFollow` | Orbit and follow camera | Done |
 | `PetTrail` | Running dust | Done |
@@ -171,7 +172,13 @@ Rules:
 | `UIController` | HUD and menu screens | New |
 
 Technical notes:
-- Enemies and moving platforms use a **kinematic Rigidbody** plus colliders, so trigger events reach the `CharacterController`.
+- **Physics rule: everything uses Rigidbody + colliders.**
+  - **Player:** a dynamic Rigidbody plus a BoxCollider (see section 3).
+  - **Enemies and moving platforms:** a **kinematic Rigidbody** moved with `Rigidbody.MovePosition` in `FixedUpdate`, plus a solid collider so the player can stand on them.
+  - **Enemy stomp zone:** a separate **trigger** collider on top.
+  - **Coins, cages, hazards and the final gate:** trigger colliders that react in `OnTriggerEnter` when the player's BoxCollider touches them.
+  - **Static ground:** a plain collider (kinematic Rigidbody optional).
+  - No `CharacterController` anywhere.
 - Communicate through C# events (`CoinsChanged`, `HealthChanged`, `FriendRescued`, `StateChanged`). The UI must not poll every frame.
 - Never `Destroy` level objects that Retry has to restore. Hide them and disable them instead.
 
@@ -202,7 +209,7 @@ Technical notes:
 |---|---|
 | Run speed | 6 m/s |
 | Jump height / double jump | 1.5 m / 1.35 m |
-| Gravity | -25 m/s² |
+| Gravity | -25 m/s² (Project Settings > Physics > Gravity; affects every Rigidbody) |
 | Stomp bounce height | 1.5 m |
 | Knockback | 6 m/s horizontal, 4 m/s up |
 | Invulnerability | 1.5 s |

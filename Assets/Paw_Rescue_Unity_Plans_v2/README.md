@@ -8,7 +8,8 @@
 - **Deadline:** **2026-11-01 23:59 Asia/Dhaka (Bangladesh).** Build a submission buffer before that time.
 - **Engine:** Unity 6.3 LTS preferred, C#, **URP** (3D Universal template). Use installed/verified package versions, not speculative pinning.
 - **Automation:** **Unity official CLI + Unity Pipeline**, `unity command`/`unity eval` when agent can use shell; `unity mcp` when MCP is needed. Codex skill for discovery; human Editor validation remains mandatory. CoplayDev is NOT a dependency.
-- **Unity modules:** Input System, Cinemachine 3, uGUI, Unity Test Framework, URP. No DOTS/ECS, DOTween, bespoke physics engine, or third-party character controller.
+- **Unity modules:** Input System, Cinemachine 3, uGUI, Unity Test Framework, URP and Unity built-in 3D Physics. No DOTS/ECS, DOTween, bespoke physics engine, or third-party character controller.
+- **Physics (decided 2026-10-29):** the player and moving objects use **Rigidbody + colliders**. The player has a dynamic Rigidbody for gravity and a BoxCollider for ground, walls and coin pickups. Project gravity is -25. There is no `CharacterController`. See `AGENTS.md` rule 7.
 - **Game feel influence:** audited KenneyNL Godot 4.6 [Starter Kit 3D Platformer](https://github.com/KenneyNL/Starter-Kit-3D-Platformer), pinned for comparison to [`3fa8a04b1c01ab23db43123d4ce814a34c3fc7f0`](https://github.com/KenneyNL/Starter-Kit-3D-Platformer/commit/3fa8a04b1c01ab23db43123d4ce814a34c3fc7f0). **Reimplement behavior idiomatically in Unity**; do not copy GDScript verbatim.
 
 ## Start here
