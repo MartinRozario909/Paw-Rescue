@@ -33,7 +33,7 @@ public class Backpack : MonoBehaviour
         switch (item.Type)
         {
             case ItemType.Coin:
-                CoinManager.Instance.AddCoins(item.Value);
+                UIManager.Instance.AddCoins(item.Value);
                 item.Collect();
                 break;
 

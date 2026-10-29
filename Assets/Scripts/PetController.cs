@@ -22,6 +22,12 @@ public class PetController : MonoBehaviour, IResettable
     [SerializeField] private float groundCheckDepth = 0.1f;     // How far below the box still counts as standing
     [SerializeField] private Transform cameraTransform;
 
+    [Header("Enemies")]
+    [SerializeField] private float knockbackDistance = 2.5f; // How far a hit pushes the pet away from the enemy
+    [SerializeField] private float knockbackHeight = 0.5f;   // Small hop while being pushed
+    [SerializeField] private float knockbackTime = 0.25f;    // No control for this long while being pushed
+    [SerializeField] private float stompBounceHeight = 1.2f; // Bounce after jumping on an enemy
+
     private Rigidbody rb;
     private BoxCollider box;
     private readonly Collider[] groundHits = new Collider[8];
@@ -29,6 +35,7 @@ public class PetController : MonoBehaviour, IResettable
     private float jumpBufferTimer;
     private bool jumpReleased;
     private int jumpsUsed;
+    private float knockbackTimer;
     private Vector3 startPosition;
     private Quaternion startRotation;
 
@@ -39,6 +46,7 @@ public class PetController : MonoBehaviour, IResettable
     // Speed the player is asking for; changes the instant a key is pressed or released
     public float TargetSpeed { get; private set; }
     public bool IsGrounded { get; private set; }
+    public bool IsKnockedBack => knockbackTimer > 0f;
 
     // Raised every time the pet jumps (including the double jump)
     public event Action Jumped;
@@ -80,13 +88,22 @@ public class PetController : MonoBehaviour, IResettable
         // Horizontal movement relative to where the camera is looking.
         // Start from the real velocity so walls can stop us.
         Vector3 planarVelocity = new Vector3(velocity.x, 0f, velocity.z);
-        Vector3 targetVelocity = GetCameraRelativeDirection() * runSpeed;
-        float responsiveness = IsGrounded ? groundResponsiveness : airResponsiveness;
-        planarVelocity = Vector3.Lerp(planarVelocity, targetVelocity, 1f - Mathf.Exp(-responsiveness * dt));
+        if (IsKnockedBack)
+        {
+            // Keep sliding away from the hit, then stop so the push is exactly knockbackDistance
+            knockbackTimer -= dt;
+            if (knockbackTimer <= 0f) planarVelocity = Vector3.zero;
+        }
+        else
+        {
+            Vector3 targetVelocity = GetCameraRelativeDirection() * runSpeed;
+            float responsiveness = IsGrounded ? groundResponsiveness : airResponsiveness;
+            planarVelocity = Vector3.Lerp(planarVelocity, targetVelocity, 1f - Mathf.Exp(-responsiveness * dt));
+        }
 
         // Jumping (the Rigidbody's gravity pulls us back down)
         jumpBufferTimer -= dt;
-        if (jumpBufferTimer > 0f && jumpsUsed < maxJumps)
+        if (jumpBufferTimer > 0f && jumpsUsed < maxJumps && !IsKnockedBack)
         {
             float height = jumpsUsed == 0 ? jumpHeight : jumpHeight * doubleJumpMultiplier;
             velocity.y = Mathf.Sqrt(2f * height * -Physics.gravity.y);
@@ -104,8 +121,8 @@ public class PetController : MonoBehaviour, IResettable
         velocity.y = Mathf.Max(velocity.y, -maxFallSpeed);
         rb.linearVelocity = new Vector3(planarVelocity.x, velocity.y, planarVelocity.z);
 
-        // Face the direction we're moving
-        if (planarVelocity.sqrMagnitude > 0.01f)
+        // Face the direction we're moving (keep facing the enemy while being pushed back)
+        if (planarVelocity.sqrMagnitude > 0.01f && !IsKnockedBack)
         {
             Quaternion targetRotation = Quaternion.LookRotation(planarVelocity);
             rb.MoveRotation(Quaternion.RotateTowards(rb.rotation, targetRotation, rotationSpeed * dt));
@@ -146,9 +163,37 @@ public class PetController : MonoBehaviour, IResettable
         return false;
     }
 
+    // Push the pet away from whatever hit it (an enemy's kick)
+    public void Knockback(Vector3 fromPosition)
+    {
+        Vector3 away = rb.position - fromPosition;
+        away.y = 0f;
+        if (away.sqrMagnitude < 0.0001f) away = -transform.forward;
+
+        Vector3 push = away.normalized * (knockbackDistance / knockbackTime);
+        push.y = Mathf.Sqrt(2f * knockbackHeight * -Physics.gravity.y);
+        rb.linearVelocity = push;
+
+        knockbackTimer = knockbackTime;
+        jumpBufferTimer = 0f;
+    }
+
+    // Bounce up after jumping on an enemy. Counts as the first jump, so a double jump is still possible.
+    public void Bounce()
+    {
+        Vector3 velocity = rb.linearVelocity;
+        velocity.y = Mathf.Sqrt(2f * stompBounceHeight * -Physics.gravity.y);
+        rb.linearVelocity = velocity;
+
+        jumpsUsed = 1;
+        IsGrounded = false;
+        Jumped?.Invoke();
+    }
+
     // Put the pet back at the start, standing still (used after a fall)
     public void Respawn()
     {
+        knockbackTimer = 0f;
         rb.linearVelocity = Vector3.zero;
         rb.angularVelocity = Vector3.zero;
         rb.position = startPosition;

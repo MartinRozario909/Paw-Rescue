@@ -85,10 +85,10 @@ public class CameraFollow : MonoBehaviour, IResettable
         Keyboard keyboard = Keyboard.current;
         if (keyboard != null)
         {
-            if (keyboard.leftArrowKey.isPressed) look.x -= keyRotationSpeed * dt;
-            if (keyboard.rightArrowKey.isPressed) look.x += keyRotationSpeed * dt;
-            if (keyboard.upArrowKey.isPressed) look.y += keyRotationSpeed * dt;
-            if (keyboard.downArrowKey.isPressed) look.y -= keyRotationSpeed * dt;
+            if (keyboard.leftArrowKey.isPressed) look.x += keyRotationSpeed * dt;
+            if (keyboard.rightArrowKey.isPressed) look.x -= keyRotationSpeed * dt;
+            if (keyboard.upArrowKey.isPressed) look.y -= keyRotationSpeed * dt;
+            if (keyboard.downArrowKey.isPressed) look.y += keyRotationSpeed * dt;
         }
 
         // Touch takes priority: on touch screens Windows also moves the mouse
