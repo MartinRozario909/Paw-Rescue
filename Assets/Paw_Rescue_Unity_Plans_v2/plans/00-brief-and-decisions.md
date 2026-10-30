@@ -29,7 +29,7 @@ Build one small complete 3D platformer with a pet hero, visually appealing and p
 - Pet character is recognizable from Cube Pets, not a Kenney demo robot; core 3D level uses required Platformer Kit.
 
 ## Non-goals
-No save system, inventory, multiplayer, enemies, combat, procedural worlds, cloud backend, custom shader graph pipeline, DOTS/ECS. Do not add automatic scene reload on failure.
+No save system, inventory, multiplayer, procedural worlds, cloud backend, custom shader graph pipeline, DOTS/ECS. Do not add automatic scene reload on failure.
 
 ## Acceptance gate
 - [ ] Scope documented; no feature conflicts in plans.

@@ -9,19 +9,19 @@
 
 ## 1. Story
 
-A brave puppy's friends, **Panda**, **Penguin** and **Cow**, have been locked in cages by a gang of grumpy critters. The puppy hops across floating islands collecting **gold coins** and uses them to unlock each friend's cage. When all three friends are free, the gate to the **Critter Camp** opens. The puppy must defeat every critter in the camp to end the game.
+A brave puppy's friends, **Panda**, **Penguin** and **Cow**, have been locked in cages by a gang of grumpy **aliens**. The puppy hops across floating islands collecting **gold coins** and uses them to unlock each friend's cage. When all three friends are free, the gate to the **Alien Camp** opens. The puppy must defeat every alien in the camp to end the game.
 
-**One-line pitch:** Hop, stomp and collect coins to free your friends, then clear the Critter Camp.
+**One-line pitch:** Hop, stomp and collect coins to free your friends, then clear the Alien Camp.
 
 ---
 
 ## 2. Core gameplay loop
 
 1. Explore an island and collect gold coins.
-2. Avoid obstacles, and stomp enemies or dodge them.
+2. Avoid obstacles, and stomp the aliens or dodge their kicks.
 3. Reach a friend's cage with enough coins and unlock it. The friend is rescued.
 4. Repeat for all three friends.
-5. The final gate opens. Enter the Critter Camp and defeat all the enemies.
+5. The final gate opens. Enter the Alien Camp and defeat all the aliens.
 6. You win.
 
 Losing all 3 hearts means **Game Over**. Retry resets the level in place, without reloading the scene.
@@ -39,23 +39,23 @@ Losing all 3 hearts means **Game Over**. Retry resets the level in place, withou
 | Camera | Follow-orbit camera. Rotate with arrow keys, mouse drag or touch drag. | Done (`CameraFollow`) |
 | Animation | Idle, Run and Jump switch instantly. Win and Lose triggers exist. | Done (`PetAnimationController`) |
 | Dust trail | Shows while grounded and running at 75% speed or more | Done (`PetTrail`) |
-| Health | **3 hearts** | To do |
-| Stomp | Landing on an enemy from above defeats it and bounces the puppy up | To do |
-| Hurt | Touching an enemy's side or a hazard costs 1 heart, knocks the puppy back and gives 1.5 s of invulnerability (the puppy blinks) | To do |
-| Fall | Falling off the world costs 1 heart and respawns the puppy at the last checkpoint | To do |
+| Health | **3 hearts** | Done (`HealthSystem`) |
+| Stomp | Landing on an alien's head defeats it and bounces the puppy up | Done (`EnemyController`, `PetController.Bounce`) |
+| Hurt | An alien's kick or a hazard costs 1 heart, knocks the puppy back and gives 1.5 s of invulnerability (the puppy blinks) | Kick done (`PetController.Knockback`); hazards to do |
+| Fall | Falling off the world costs 1 heart and respawns the puppy at the last checkpoint | Done, but respawns at the start until checkpoints exist |
 | Squash and stretch | Stretches on jump and squashes on landing, visual only | Nice to have |
 
 ### Health rules
 - The puppy starts with **3 hearts**. The maximum is 3.
-- Damage sources are an enemy's side or front, spikes, saws and falling off the world.
+- Damage sources are an alien's kick, spikes, saws and falling off the world. Bumping into an alien's body does no damage.
 - After a hit, the puppy is **invulnerable for 1.5 s**, so one touch can't drain several hearts.
 - At **0 hearts** the game enters the **Game Over** state and the Retry button appears.
 - *Optional:* a `heart.fbx` pickup in a hard-to-reach spot restores 1 heart.
 
 ### Stomp rules
-- A stomp counts only when the puppy is **falling** (`verticalVelocity < 0`) and its feet are **above the top of the enemy**.
-- A stomp defeats the enemy (a poof effect plus sound) and bounces the puppy up by about 1 jump height. After the bounce the puppy still has **1 air jump**, so it can chain stomps.
-- Any other contact counts as a hurt.
+- A stomp counts when the puppy lands on the alien and its feet are **at or above the top of the alien's head** (within a 0.25 m `stompMargin`).
+- A stomp costs the alien 1 health (default 1, so one stomp defeats it) and bounces the puppy up by about 1 jump height. After the bounce the puppy still has **1 air jump**, so it can chain stomps.
+- Any other contact does nothing. Only the kick hurts.
 
 ---
 
@@ -75,19 +75,31 @@ Losing all 3 hearts means **Game Over**. Retry resets the level in place, withou
 
 ---
 
-## 5. Enemies (the grumpy critters)
+## 5. Enemies (the grumpy aliens)
 
-Every enemy uses the same base: a **body** that hurts the puppy and a **stomp zone** on top that defeats the enemy. Enemies are Cube Pets animals, which keeps the art consistent.
+There is **one enemy type: the Alien**. It uses the Platformer Kit model `character-oodi.fbx` and is the `Enemy` prefab (`Assets/Prefabs/Enemy.prefab`, `EnemyController`, `EnemyAnimator`). Aliens walk on the ground and **kick** the puppy. There are no flying or charging enemies.
 
-| Enemy | Model | Behaviour | Where |
-|---|---|---|---|
-| **Crab** (Patroller) | `animal-crab` | Walks back and forth between two points. Turns at edges and points. | Zone 1 onward |
-| **Hog** (Charger) | `animal-hog` | Idles until the puppy is within about 6 m, then runs at the puppy. Returns home if the puppy gets far away. | Zone 3, Camp |
-| **Bee** (Flyer) | `animal-bee` | Floats up and down in place or along a short path. It is in the air, so it must be stomped at the right moment. | Zone 2, Camp |
+Each alien is set up in the Inspector in one of two modes:
 
-- Enemies do **not** chase off ledges. Movement stays on their own island.
-- Stomping a defeated enemy hides it and disables its colliders. **It is not destroyed**, so Retry can bring it back.
-- Speeds are tunable in the Inspector (Crab 2 m/s, Hog 5 m/s charge, Bee 1 m/s bob).
+| Mode | Behaviour | Status |
+|---|---|---|
+| **Guard** | Waits at its start spot. When the puppy comes within the search radius (6 m), it walks over and kicks. If the puppy gets away, it walks back to its spot. | Done (`EnemyController`) |
+| **Patrol** | Tick **Will Patrol** and set **Spot1** and **Spot2**. The alien walks back and forth between the two spots and rests at each one for a random time between **Time To Stand Min** and **Max**. When the puppy comes within the search radius, it leaves the route, walks over and kicks. If the puppy gets away, it goes back to the spot it was heading for and carries on. A ledge in the way makes it turn round. | Done (`EnemyController`). With Will Patrol off, or a spot empty, the alien behaves as a Guard. |
+
+`EnemyController` runs these states: **Idle** (standing at its spot or resting at a patrol spot), **Patrolling**, **Attacking** (walking up to the puppy and kicking), **GoingBack** and **Death**.
+
+**Kick rules (done):**
+- When the puppy is within the attack range (1.5 m), the alien stops, turns to face the puppy and kicks. Kicks alternate between the right and left leg.
+- A kick hurts only while the foot is out in front (0.2–0.4 s into the kick animation) and only if the puppy is inside the `AttackCollider` trigger. Each kick can hit once.
+- A kick costs 1 heart and knocks the puppy back (`PetController.Knockback`).
+- There is a 1 s cooldown between kicks, so the puppy has time to jump onto the alien's head.
+
+**Other rules:**
+- Aliens do **not** walk off ledges (a ray checks for ground ahead). Movement stays on their own island.
+- Bumping into an alien's body does no damage. Only the kick hurts.
+- A stomp plays the death animation. After 1 s, the alien's model is hidden and its colliders are disabled. **It is not destroyed**, so Retry can bring it back.
+- Speed, search radius, attack range, kick timing and the number of stomps to defeat an alien are all tunable in the Inspector.
+- *Optional:* the other Platformer Kit aliens (`character-oobi`, `-ooli`, `-oopi`, `-oozi`) can be used as colour variants. Check first that their animation clips work with `EnemyAnimator`.
 
 ---
 
@@ -107,19 +119,19 @@ Every enemy uses the same base: a **body** that hurts the puppy and a **stomp zo
 ## 7. Level layout (one scene: `Scene1`)
 
 ```text
-[Start Meadow] → [Zone 1: Panda] → [Zone 2: Penguin] → [Zone 3: Cow] → [Gate] → [Critter Camp]
+[Start Meadow] → [Zone 1: Panda] → [Zone 2: Penguin] → [Zone 3: Cow] → [Gate] → [Alien Camp]
 ```
 
 | Area | Teaches / tests | Contents | Coins |
 |---|---|---|---|
 | **Start Meadow** | Move, camera, jump, double jump | Safe wide island, a coin line, a sign | 5 |
-| **Zone 1 — Panda Grove** | Stomping | 2 Crabs, spikes, small gaps, Panda cage | 13 |
-| **Zone 2 — Penguin Peak** (snow blocks) | Timing | Moving platforms, 2 Bees, a falling platform, Penguin cage | 13 |
-| **Zone 3 — Cow Pasture** | Combining skills | A Saw, a Hog, a Spring to an upper island, Cow cage | 14 |
+| **Zone 1 — Panda Grove** | Stomping | 1 Guard alien, then 1 Patrol alien, spikes, small gaps, Panda cage | 13 |
+| **Zone 2 — Penguin Peak** (snow blocks) | Timing | Moving platforms, a falling platform, 1 Patrol alien on the landing island, Penguin cage | 13 |
+| **Zone 3 — Cow Pasture** | Combining skills | A Saw, 2 Patrol aliens with crossing routes, a Spring to an upper island, Cow cage | 14 |
 | **Gate** | Goal check | A `door-large` stays closed until 3/3 friends are rescued | — |
-| **Critter Camp** (final arena) | Final test | Fenced arena. **2 waves**: Wave 1 is 3 Crabs and 1 Bee; Wave 2 is 2 Hogs, 2 Crabs and 1 Bee. The gate behind the player locks during the fight. | — |
+| **Alien Camp** (final arena) | Final test | Fenced arena. **2 waves**: Wave 1 is 3 Guard aliens; Wave 2 is 2 Guard and 3 Patrol aliens. The gate behind the player locks during the fight. | — |
 
-The game is won when **all enemies in the Camp are defeated**. The rescued friends cheer and the **Win** screen appears.
+The game is won when **all aliens in the Camp are defeated**. The rescued friends cheer and the **Win** screen appears.
 
 Design rules:
 - Measure gap sizes from the real jump distance in Play Mode. Don't guess them.
@@ -138,7 +150,7 @@ Menu → Playing ⇄ Paused
 
 | Screen | Contents |
 |---|---|
-| **Start** | Title "Paw Rescue", the puppy, the goal ("Collect coins, free your friends, clear the Critter Camp!"), controls, Play and Quit |
+| **Start** | Title "Paw Rescue", the puppy, the goal ("Collect coins, free your friends, clear the Alien Camp!"), controls, Play and Quit |
 | **HUD** | ❤❤❤ hearts, coin count, 3 friend icons, wave counter in the Camp, pause button |
 | **Pause** | Resume, Restart, Main Menu |
 | **Game Over** | "Oh no!", Retry, Main Menu |
@@ -155,7 +167,7 @@ Rules:
 
 | Script | Responsibility | Status |
 |---|---|---|
-| `PetController` | Rigidbody movement in `FixedUpdate`, ground check, double jump (the Rigidbody does gravity). Needs `Bounce(float)` and `Knockback(Vector3)`, which set `Rigidbody.linearVelocity`. | Done, needs 2 new methods |
+| `PetController` | Rigidbody movement in `FixedUpdate`, ground check, double jump (the Rigidbody does gravity). `Bounce()` (stomp) and `Knockback(Vector3)` (kick) set `Rigidbody.linearVelocity`. | Done |
 | `PetAnimationController` | Animator parameters | Done |
 | `CameraFollow` | Orbit and follow camera | Done |
 | `PetTrail` | Running dust | Done |
@@ -164,8 +176,7 @@ Rules:
 | `IResettable` | `ResetRunState()` interface. GameManager calls it on Retry. | New |
 | `Coin` | Spin, bob, pickup | New |
 | `FriendCage` | Coin cost, unlock, friend celebration, checkpoint | New |
-| `EnemyBase` | Stomp-zone and body-hurt handling, defeat or hide, reset | New |
-| `EnemyPatrol` / `EnemyCharger` / `EnemyFlyer` | Movement behaviours | New |
+| `EnemyController` | The alien: guard or patrol, chase within the search radius, ledge check, kick with `AttackCollider`, stomp on the head, death and hide, reset | Done |
 | `Hazard` | Damage on touch (spikes, saw) | New |
 | `MovingPlatform` / `FallingPlatform` / `Spring` | Level mechanics | New |
 | `FinalGate` / `ArenaWaves` | Gate unlock at 3/3 friends, wave spawning, win | New |
@@ -174,8 +185,8 @@ Rules:
 Technical notes:
 - **Physics rule: everything uses Rigidbody + colliders.**
   - **Player:** a dynamic Rigidbody plus a BoxCollider (see section 3).
-  - **Enemies and moving platforms:** a **kinematic Rigidbody** moved with `Rigidbody.MovePosition` in `FixedUpdate`, plus a solid collider so the player can stand on them.
-  - **Enemy stomp zone:** a separate **trigger** collider on top.
+  - **Aliens:** a **dynamic Rigidbody** (gravity on, rotation frozen) that sets `Rigidbody.linearVelocity` in `FixedUpdate` and turns with `Rigidbody.MoveRotation`. The solid body collider is what the player lands on to stomp (checked in `OnCollisionEnter`). The kick uses a separate `AttackCollider` **trigger** in front of the feet, read with `Physics.OverlapBox` only while the foot is out. When an alien dies, its Rigidbody becomes kinematic and its colliders are disabled.
+  - **Moving platforms:** a **kinematic Rigidbody** moved with `Rigidbody.MovePosition` in `FixedUpdate`, plus a solid collider so the player can stand on them.
   - **Coins, cages, hazards and the final gate:** trigger colliders that react in `OnTriggerEnter` when the player's BoxCollider touches them.
   - **Static ground:** a plain collider (kinematic Rigidbody optional).
   - No `CharacterController` anywhere.
@@ -189,12 +200,12 @@ Technical notes:
 | Day | Priority | Tasks |
 |---|---|---|
 | **Thu 29 Oct** | P0 | ✅ Movement, camera, animation, dust. `GameManager` states, `PlayerHealth`, `Coin`, fall and respawn |
-| **Fri 30 Oct** | P0 | Crab enemy plus stomp, spikes, `FriendCage` ×3, graybox of all zones, final gate, Camp waves, Retry |
-| **Sat 31 Oct** | P1 | Kenney UI screens and HUD, Bee and Hog, moving, falling and spring platforms, sounds, art pass |
+| **Fri 30 Oct** | P0 | ✅ Alien enemy (guard, patrol, kick, stomp). Spikes, `FriendCage` ×3, graybox of all zones, final gate, Camp waves, Retry |
+| **Sat 31 Oct** | P1 | Kenney UI screens and HUD, moving, falling and spring platforms, sounds, art pass |
 | **Sun 1 Nov** (until 23:59 BDT) | P0 | Full playtests, bug fixes, Windows build, 30–60 s video, five-line note, submit |
 
 ### Cut order (if late)
-1. Hog enemy, then use more Crabs instead.
+1. Alien patrol mode; place more Guard aliens instead.
 2. Falling platform and saw.
 3. Camp Wave 2, keeping a single larger wave.
 4. Heart pickup, friend follow animation and squash/stretch.
@@ -215,16 +226,18 @@ Technical notes:
 | Invulnerability | 1.5 s |
 | Coins per cage | 10 |
 | Coin spin / bob | 2 rad/s / 0.15 m |
-| Crab speed / Hog charge / Bee bob | 2 / 5 / 1 m/s |
-| Hog detection radius | 6 m |
+| Alien walk speed | 2.5 m/s |
+| Alien search radius / attack range | 6 m / 1.5 m |
+| Alien kick hit window / cooldown | 0.2–0.4 s into the kick / 1 s |
+| Alien kick damage / stomps to defeat | 1 heart / 1 |
 | Kill height (fall) | y = -15 |
 
 ---
 
 ## 12. Kenney assets used
 
-- **Cube Pets:** dog (player), panda, penguin and cow (friends), crab, hog and bee (enemies)
-- **Platformer Kit:** grass and snow blocks, coin-gold, lock, flag, door-large, fence, spikes, saw, spring, moving and falling platforms, trees, flowers, heart
+- **Cube Pets:** dog (player), panda, penguin and cow (friends)
+- **Platformer Kit:** `character-oodi` alien (enemy), grass and snow blocks, coin-gold, lock, flag, door-large, fence, spikes, saw, spring, moving and falling platforms, trees, flowers, heart
 - **UI Pack:** buttons, panels, heart and coin icons, HUD frames
 
 All three packs are CC0.

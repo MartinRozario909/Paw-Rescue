@@ -1,10 +1,20 @@
 using UnityEngine;
 
-// A walking enemy in the style of Kenney's platformer enemies. It waits at its spot
-// until the player comes within its search radius, walks over and kicks.
+public enum EnemyState
+{
+    Idle,       // Standing still: at its own spot, or resting at a patrol spot
+    Patrolling, // Walking to the other patrol spot
+    Attacking,  // Walking up to the player and kicking
+    GoingBack,  // Lost the player, walking back to its spot or patrol route
+    Death
+}
+
+// A walking enemy in the style of Kenney's platformer enemies. It stands at its spot,
+// or with Will Patrol ticked walks between Spot1 and Spot2, resting a random time at each.
+// When the player comes within its search radius it walks over and kicks.
 // The kick only hurts if the player is inside the attack collider (in front of
 // its feet) while the foot is swinging out. It won't walk off ledges and goes back
-// to its spot when the player gets away. Jumping on its head damages it.
+// to its spot or route when the player gets away. Jumping on its head damages it.
 [RequireComponent(typeof(Rigidbody))]
 public class EnemyController : MonoBehaviour, IResettable
 {
@@ -38,6 +48,15 @@ public class EnemyController : MonoBehaviour, IResettable
     [SerializeField] private float rotationSpeed = 540f;
     [SerializeField] private float ledgeCheckDistance = 0.7f; // Looks this far ahead for ground before walking
 
+    [Header("Patrol")]
+    [SerializeField] private bool willPatrol;            // Off: stands at its start spot. On: walks between Spot1 and Spot2
+    [SerializeField] private Transform spot1;
+    [SerializeField] private Transform spot2;
+    [SerializeField] private float timeToStandMin = 1f;  // Rests at each spot for a random time between Min and Max seconds
+    [SerializeField] private float timeToStandMax = 3f;
+
+    private const float ArriveDistance = 0.1f; // Close enough to a spot to count as there
+
     private Rigidbody rb;
     private HealthSystem playerHealth;
     private readonly Collider[] hits = new Collider[8];
@@ -51,10 +70,18 @@ public class EnemyController : MonoBehaviour, IResettable
     private float cooldownTimer;
     private int health;
     private float deathTimer;
+    private Vector3 spot1Position; // Saved at start, so spots placed under the enemy don't move with it
+    private Vector3 spot2Position;
+    private bool headingToSpot1;
+    private float standTimer;
 
+    public EnemyState State { get; private set; }
     public bool IsKicking => isKicking;
-    public bool IsDead { get; private set; }
+    public bool IsDead => State == EnemyState.Death;
     public int Health => health;
+
+    // The spot it is walking to, or resting at before walking to the other one
+    private Vector3 PatrolTarget => headingToSpot1 ? spot1Position : spot2Position;
 
     void Awake()
     {
@@ -71,6 +98,26 @@ public class EnemyController : MonoBehaviour, IResettable
         health = maxHealth;
         startPosition = transform.position;
         startRotation = transform.rotation;
+
+        if (willPatrol && (spot1 == null || spot2 == null))
+        {
+            Debug.LogWarning($"{name}: Will Patrol is on but Spot1 or Spot2 is empty, so it will stand still.", this);
+            willPatrol = false;
+        }
+        if (willPatrol)
+        {
+            spot1Position = spot1.position;
+            spot2Position = spot2.position;
+        }
+
+        EnterStartState();
+    }
+
+    // Keep Max from going below Min in the Inspector
+    void OnValidate()
+    {
+        timeToStandMin = Mathf.Max(0f, timeToStandMin);
+        timeToStandMax = Mathf.Max(timeToStandMin, timeToStandMax);
     }
 
     // Start is called once before the first execution of Update after the MonoBehaviour is created
@@ -89,7 +136,7 @@ public class EnemyController : MonoBehaviour, IResettable
     {
         float dt = Time.fixedDeltaTime;
 
-        if (IsDead)
+        if (State == EnemyState.Death)
         {
             // Let the death animation play, then hide the body
             if (deathTimer > 0f)
@@ -103,33 +150,66 @@ public class EnemyController : MonoBehaviour, IResettable
         Vector3 move = Vector3.zero;
         Vector3 look = Vector3.zero;
 
-        if (isKicking)
-        {
-            UpdateKick(dt); // Stand still until the kick is over
-        }
-        else
-        {
-            cooldownTimer -= dt;
+        // Seeing the player interrupts standing, patrolling and going back
+        bool seesPlayer = CanSeePlayer(out Vector3 toPlayer);
+        if (seesPlayer) State = EnemyState.Attacking;
+        if (!isKicking) cooldownTimer -= dt;
 
-            if (CanSeePlayer(out Vector3 toPlayer))
-            {
-                look = toPlayer;
-                if (toPlayer.magnitude <= attackRange)
+        switch (State)
+        {
+            case EnemyState.Idle:
+                // Only a patrolling enemy moves on; the other one stands here until it sees the player
+                if (willPatrol)
                 {
-                    if (cooldownTimer <= 0f) StartKick(toPlayer);
+                    standTimer -= dt;
+                    if (standTimer <= 0f) State = EnemyState.Patrolling;
+                }
+                break;
+
+            case EnemyState.Patrolling:
+                move = look = FlatDirectionTo(PatrolTarget, out bool reachedSpot);
+                // A ledge in the way counts as reaching the spot, so it turns round instead of getting stuck
+                if (reachedSpot || !HasGroundAhead(move))
+                {
+                    move = look = Vector3.zero;
+                    StartStanding();
+                }
+                break;
+
+            case EnemyState.Attacking:
+                if (isKicking)
+                {
+                    UpdateKick(dt); // Stand still until the kick is over, even if the player has left
+                }
+                else if (!seesPlayer)
+                {
+                    State = EnemyState.GoingBack;
                 }
                 else
                 {
-                    move = toPlayer.normalized;
+                    look = toPlayer;
+                    if (toPlayer.magnitude <= attackRange)
+                    {
+                        if (cooldownTimer <= 0f) StartKick(toPlayer);
+                    }
+                    else
+                    {
+                        move = toPlayer.normalized;
+                    }
                 }
-            }
-            else
-            {
-                // Lost the player: walk back to the start spot
-                Vector3 toStart = startPosition - rb.position;
-                toStart.y = 0f;
-                if (toStart.magnitude > 0.1f) move = look = toStart.normalized;
-            }
+                break;
+
+            case EnemyState.GoingBack:
+                // Back to its own spot, or to the patrol spot it was heading for
+                Vector3 home = willPatrol ? PatrolTarget : startPosition;
+                move = look = FlatDirectionTo(home, out bool reachedHome);
+                if (reachedHome || !HasGroundAhead(move))
+                {
+                    move = look = Vector3.zero;
+                    if (willPatrol) StartStanding();
+                    else State = EnemyState.Idle;
+                }
+                break;
         }
 
         if (move != Vector3.zero && !HasGroundAhead(move)) move = Vector3.zero;
@@ -166,7 +246,7 @@ public class EnemyController : MonoBehaviour, IResettable
 
     private void Die()
     {
-        IsDead = true;
+        State = EnemyState.Death;
         isKicking = false;
         attackCollider.enabled = false;
         bodyCollider.enabled = false;
@@ -258,6 +338,31 @@ public class EnemyController : MonoBehaviour, IResettable
         }
     }
 
+    // A patrolling enemy starts by walking to Spot1; the other one stands at its spot
+    private void EnterStartState()
+    {
+        headingToSpot1 = true;
+        standTimer = 0f;
+        State = willPatrol ? EnemyState.Patrolling : EnemyState.Idle;
+    }
+
+    // Rest at this patrol spot for a random time, then head for the other one
+    private void StartStanding()
+    {
+        State = EnemyState.Idle;
+        standTimer = Random.Range(timeToStandMin, timeToStandMax);
+        headingToSpot1 = !headingToSpot1;
+    }
+
+    // Flat direction to a point, or zero once within ArriveDistance of it
+    private Vector3 FlatDirectionTo(Vector3 target, out bool arrived)
+    {
+        Vector3 offset = target - rb.position;
+        offset.y = 0f;
+        arrived = offset.magnitude <= ArriveDistance;
+        return arrived ? Vector3.zero : offset.normalized;
+    }
+
     // A short ray down just ahead of the enemy; no ground means a ledge
     private bool HasGroundAhead(Vector3 direction)
     {
@@ -267,7 +372,7 @@ public class EnemyController : MonoBehaviour, IResettable
 
     public void ResetRunState()
     {
-        IsDead = false;
+        EnterStartState();
         health = maxHealth;
         deathTimer = 0f;
         bodyCollider.enabled = true;
@@ -292,12 +397,23 @@ public class EnemyController : MonoBehaviour, IResettable
         animator.Update(0f);
     }
 
-    // Show the search radius (yellow) and attack range (red) when the enemy is selected
+    // Show the search radius (yellow), attack range (red) and patrol route (cyan) when the enemy is selected
     void OnDrawGizmosSelected()
     {
         Gizmos.color = Color.yellow;
         Gizmos.DrawWireSphere(transform.position, searchRadius);
         Gizmos.color = Color.red;
         Gizmos.DrawWireSphere(transform.position, attackRange);
+
+        if (willPatrol && spot1 != null && spot2 != null)
+        {
+            // In Play Mode use the saved positions, since spots under the enemy move with it
+            Vector3 a = Application.isPlaying ? spot1Position : spot1.position;
+            Vector3 b = Application.isPlaying ? spot2Position : spot2.position;
+            Gizmos.color = Color.cyan;
+            Gizmos.DrawLine(a, b);
+            Gizmos.DrawWireSphere(a, 0.3f);
+            Gizmos.DrawWireSphere(b, 0.3f);
+        }
     }
 }
