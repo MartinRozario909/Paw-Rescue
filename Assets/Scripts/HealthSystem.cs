@@ -65,6 +65,7 @@ public class HealthSystem : MonoBehaviour, IResettable
         CurrentHealth = Mathf.Max(CurrentHealth - amount, 0);
         invulnerableTimer = invulnerableTime;
         HealthChanged?.Invoke(CurrentHealth, maxHealth);
+        SoundManager.Play(Sound.Hurt);
 
         if (IsDead) Died?.Invoke();
         return true;

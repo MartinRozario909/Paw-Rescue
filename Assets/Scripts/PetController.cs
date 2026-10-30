@@ -36,6 +36,7 @@ public class PetController : MonoBehaviour, IResettable
     private bool jumpReleased;
     private int jumpsUsed;
     private float knockbackTimer;
+    private Vector3 platformVelocity; // Velocity of the moving platform we stand on, added on top of our own
     private Vector3 startPosition;
     private Quaternion startRotation;
 
@@ -82,12 +83,15 @@ public class PetController : MonoBehaviour, IResettable
         float dt = Time.fixedDeltaTime;
         Vector3 velocity = rb.linearVelocity;
 
-        IsGrounded = CheckGrounded();
+        IsGrounded = CheckGrounded(out Collider ground);
         if (IsGrounded && velocity.y <= 0.01f) jumpsUsed = 0;
 
         // Horizontal movement relative to where the camera is looking.
-        // Start from the real velocity so walls can stop us.
-        Vector3 planarVelocity = new Vector3(velocity.x, 0f, velocity.z);
+        // Start from the real velocity so walls can stop us, minus last step's ride on a platform.
+        Vector3 planarVelocity = new Vector3(velocity.x, 0f, velocity.z) - platformVelocity;
+        MovingPlatform platform = ground != null && ground.attachedRigidbody != null
+            ? ground.attachedRigidbody.GetComponent<MovingPlatform>() : null;
+        platformVelocity = platform != null ? platform.Velocity : Vector3.zero;
         if (IsKnockedBack)
         {
             // Keep sliding away from the hit, then stop so the push is exactly knockbackDistance
@@ -111,6 +115,7 @@ public class PetController : MonoBehaviour, IResettable
             jumpBufferTimer = 0f;
             IsGrounded = false;
             Jumped?.Invoke();
+            SoundManager.Play(Sound.Jump);
         }
         else if (jumpReleased && velocity.y > 0f)
         {
@@ -119,7 +124,7 @@ public class PetController : MonoBehaviour, IResettable
         jumpReleased = false;
 
         velocity.y = Mathf.Max(velocity.y, -maxFallSpeed);
-        rb.linearVelocity = new Vector3(planarVelocity.x, velocity.y, planarVelocity.z);
+        rb.linearVelocity = new Vector3(planarVelocity.x + platformVelocity.x, velocity.y, planarVelocity.z + platformVelocity.z);
 
         // Face the direction we're moving (keep facing the enemy while being pushed back)
         if (planarVelocity.sqrMagnitude > 0.01f && !IsKnockedBack)
@@ -149,18 +154,23 @@ public class PetController : MonoBehaviour, IResettable
         if (keyboard.spaceKey.wasReleasedThisFrame) jumpReleased = true;
     }
 
-    // A thin box just under the BoxCollider: if it touches anything solid that isn't us, we're grounded
-    private bool CheckGrounded()
+    // A thin box just under the BoxCollider: if it touches anything solid that isn't us, we're grounded.
+    // Also hands back what we stand on, so a moving platform can carry us.
+    private bool CheckGrounded(out Collider ground)
     {
+        ground = null;
         Vector3 bottom = transform.TransformPoint(box.center + Vector3.down * (box.size.y * 0.5f));
         Vector3 halfExtents = new Vector3(box.size.x * 0.45f, groundCheckDepth, box.size.z * 0.45f);
         int count = Physics.OverlapBoxNonAlloc(bottom, halfExtents, groundHits, transform.rotation, ~0, QueryTriggerInteraction.Ignore);
 
         for (int i = 0; i < count; i++)
         {
-            if (groundHits[i].attachedRigidbody != rb) return true;
+            if (groundHits[i].attachedRigidbody == rb) continue;
+            ground = groundHits[i];
+            // Prefer a moving platform if we stand on the seam between it and something else
+            if (ground.attachedRigidbody != null && ground.attachedRigidbody.GetComponent<MovingPlatform>() != null) break;
         }
-        return false;
+        return ground != null;
     }
 
     // Push the pet away from whatever hit it (an enemy's kick)
@@ -181,11 +191,19 @@ public class PetController : MonoBehaviour, IResettable
     // Bounce up after jumping on an enemy. Counts as the first jump, so a double jump is still possible.
     public void Bounce()
     {
+        Bounce(stompBounceHeight);
+    }
+
+    // Bounce up to this height (springs use a big one)
+    public void Bounce(float height)
+    {
         Vector3 velocity = rb.linearVelocity;
-        velocity.y = Mathf.Sqrt(2f * stompBounceHeight * -Physics.gravity.y);
+        velocity.y = Mathf.Sqrt(2f * height * -Physics.gravity.y);
         rb.linearVelocity = velocity;
 
         jumpsUsed = 1;
+        jumpBufferTimer = 0f;
+        jumpReleased = false; // Releasing Space must not cut the bounce short
         IsGrounded = false;
         Jumped?.Invoke();
     }
@@ -193,12 +211,19 @@ public class PetController : MonoBehaviour, IResettable
     // Put the pet back at the start, standing still (used after a fall)
     public void Respawn()
     {
+        Respawn(startPosition);
+    }
+
+    // Put the pet back at a checkpoint, standing still and facing the way it started
+    public void Respawn(Vector3 position)
+    {
         knockbackTimer = 0f;
+        platformVelocity = Vector3.zero;
         rb.linearVelocity = Vector3.zero;
         rb.angularVelocity = Vector3.zero;
-        rb.position = startPosition;
+        rb.position = position;
         rb.rotation = startRotation;
-        transform.SetPositionAndRotation(startPosition, startRotation);
+        transform.SetPositionAndRotation(position, startRotation);
     }
 
     public void ResetRunState()

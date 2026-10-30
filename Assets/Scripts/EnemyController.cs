@@ -239,6 +239,7 @@ public class EnemyController : MonoBehaviour, IResettable
     private void Stomped(PetController pet)
     {
         pet.Bounce();
+        SoundManager.Play(Sound.Stomp);
 
         health--;
         if (health <= 0) Die();
@@ -372,6 +373,9 @@ public class EnemyController : MonoBehaviour, IResettable
 
     public void ResetRunState()
     {
+        // An arena enemy that was never switched on hasn't run Awake yet, so it is already as it started
+        if (rb == null) return;
+
         EnterStartState();
         health = maxHealth;
         deathTimer = 0f;
@@ -393,8 +397,12 @@ public class EnemyController : MonoBehaviour, IResettable
         cooldownTimer = 0f;
         attackCollider.enabled = false;
 
-        animator.Rebind();
-        animator.Update(0f);
+        // A switched-off Animator restarts by itself when it is switched back on
+        if (animator.isActiveAndEnabled)
+        {
+            animator.Rebind();
+            animator.Update(0f);
+        }
     }
 
     // Show the search radius (yellow), attack range (red) and patrol route (cyan) when the enemy is selected

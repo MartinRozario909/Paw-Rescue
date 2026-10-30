@@ -56,6 +56,7 @@ public class Item : MonoBehaviour, IResettable
         visual.gameObject.SetActive(false);
         pickupCollider.enabled = false;
         if (pickupEffect != null) pickupEffect.Play();
+        SoundManager.Play(type == ItemType.Coin ? Sound.Coin : Sound.Heart);
     }
 
     public void ResetRunState()

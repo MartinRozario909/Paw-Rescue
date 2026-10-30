@@ -41,9 +41,9 @@ Losing all 3 hearts means **Game Over**. Retry resets the level in place, withou
 | Dust trail | Shows while grounded and running at 75% speed or more | Done (`PetTrail`) |
 | Health | **3 hearts** | Done (`HealthSystem`) |
 | Stomp | Landing on an alien's head defeats it and bounces the puppy up | Done (`EnemyController`, `PetController.Bounce`) |
-| Hurt | An alien's kick or a hazard costs 1 heart, knocks the puppy back and gives 1.5 s of invulnerability (the puppy blinks) | Kick done (`PetController.Knockback`); hazards to do |
-| Fall | Falling off the world costs 1 heart and respawns the puppy at the last checkpoint | Done, but respawns at the start until checkpoints exist |
-| Squash and stretch | Stretches on jump and squashes on landing, visual only | Nice to have |
+| Hurt | An alien's kick or a hazard costs 1 heart, knocks the puppy back and gives 1.5 s of invulnerability (the puppy blinks) | Done (`PetController.Knockback`, `Hazard`) |
+| Fall | Falling off the world costs 1 heart and respawns the puppy at the last checkpoint | Done (`GameManager.SetCheckpoint`) |
+| Squash and stretch | Stretches on jump and squashes on landing, visual only | Done (`PetSquash`) |
 
 ### Health rules
 - The puppy starts with **3 hearts**. The maximum is 3.
@@ -107,7 +107,7 @@ Each alien is set up in the Inspector in one of two modes:
 
 | Obstacle | Model | Behaviour |
 |---|---|---|
-| Spikes | `trap-spikes.fbx`, `spike-block.fbx` | Static. Touching costs 1 heart. |
+| Spikes | `trap-spikes-large.fbx` | Pop out, stay out for **Time Out** seconds, then sink in for **Time In** seconds; a short peek warns before they pop. Only hurt while out (1 heart); safe to walk on while in (`SpikeTrap`). |
 | Saw | `saw.fbx` | Spins and moves along a line between two points. Costs 1 heart. |
 | Moving platform | `block-moving.fbx` | Moves between two points. The puppy rides it. |
 | Falling platform | `platform.fbx` | Shakes, then drops 0.5 s after the puppy lands. Resets on Retry. |
@@ -116,7 +116,7 @@ Each alien is set up in the Inspector in one of two modes:
 
 ---
 
-## 7. Level layout (one scene: `Scene1`)
+## 7. Level layout (one scene: `GameScene`, built by `GameSceneBuilder`)
 
 ```text
 [Start Meadow] → [Zone 1: Panda] → [Zone 2: Penguin] → [Zone 3: Cow] → [Gate] → [Alien Camp]
@@ -167,20 +167,22 @@ Rules:
 
 | Script | Responsibility | Status |
 |---|---|---|
-| `PetController` | Rigidbody movement in `FixedUpdate`, ground check, double jump (the Rigidbody does gravity). `Bounce()` (stomp) and `Knockback(Vector3)` (kick) set `Rigidbody.linearVelocity`. | Done |
+| `PetController` | Rigidbody movement in `FixedUpdate`, ground check, double jump (the Rigidbody does gravity). `Bounce()` (stomp, spring) and `Knockback(Vector3)` (kick, hazard) set `Rigidbody.linearVelocity`. Rides moving platforms. | Done |
 | `PetAnimationController` | Animator parameters | Done |
 | `CameraFollow` | Orbit and follow camera | Done |
-| `PetTrail` | Running dust | Done |
-| `PlayerHealth` | Hearts, invulnerability, blink, death event | New |
-| `GameManager` | State machine, coins, friends rescued, checkpoint, win/lose, `ResetRun()` | Stub exists, needs filling |
-| `IResettable` | `ResetRunState()` interface. GameManager calls it on Retry. | New |
-| `Coin` | Spin, bob, pickup | New |
-| `FriendCage` | Coin cost, unlock, friend celebration, checkpoint | New |
+| `PetTrail` / `PetSquash` | Running dust / squash and stretch | Done |
+| `HealthSystem` | Hearts, invulnerability, blink, death event | Done |
+| `GameManager` | State machine (Menu, Playing, Paused, GameOver, Won), friends rescued, checkpoint, run time, `ResetLevel()` | Done |
+| `IResettable` | `ResetRunState()` interface. GameManager calls it on Start, Retry and Main Menu. | Done |
+| `Item` / `Backpack` | Coin and heart spin, bob and pickup | Done |
+| `FriendCage` | Coin cost, unlock, friend celebration, checkpoint, friend waits at the gate | Done |
 | `EnemyController` | The alien: guard or patrol, chase within the search radius, ledge check, kick with `AttackCollider`, stomp on the head, death and hide, reset | Done |
-| `Hazard` | Damage on touch (spikes, saw) | New |
-| `MovingPlatform` / `FallingPlatform` / `Spring` | Level mechanics | New |
-| `FinalGate` / `ArenaWaves` | Gate unlock at 3/3 friends, wave spawning, win | New |
-| `UIController` | HUD and menu screens | New |
+| `Hazard` / `Saw` | Damage on touch (spikes, saw); the saw slides and spins | Done |
+| `MovingPlatform` / `FallingPlatform` / `Spring` | Level mechanics | Done |
+| `FinalGate` / `ArenaWaves` | Gate unlock at 3/3 friends, gate locks behind the pet, wave spawning, win | Done |
+| `UIManager` | HUD (hearts, coins, friend icons, wave counter, messages, pause button) and Start, Pause, Game Over and Win screens | Done |
+| `SoundManager` | Pooled sound effects, generated in code (the project has no audio files) | Done |
+| `GameSceneBuilder` (Editor) | Menu **Paw Rescue > Build Game Scene** lays out `GameScene`; **Paw Rescue > Build Windows** builds the player | Done |
 
 Technical notes:
 - **Physics rule: everything uses Rigidbody + colliders.**
@@ -200,8 +202,8 @@ Technical notes:
 | Day | Priority | Tasks |
 |---|---|---|
 | **Thu 29 Oct** | P0 | ✅ Movement, camera, animation, dust. `GameManager` states, `PlayerHealth`, `Coin`, fall and respawn |
-| **Fri 30 Oct** | P0 | ✅ Alien enemy (guard, patrol, kick, stomp). Spikes, `FriendCage` ×3, graybox of all zones, final gate, Camp waves, Retry |
-| **Sat 31 Oct** | P1 | Kenney UI screens and HUD, moving, falling and spring platforms, sounds, art pass |
+| **Fri 30 Oct** | P0 | ✅ Alien enemy (guard, patrol, kick, stomp). ✅ Spikes, `FriendCage` ×3, all zones in `GameScene`, final gate, Camp waves, Retry |
+| **Sat 31 Oct** | P1 | ✅ Kenney UI screens and HUD, moving, falling and spring platforms, sounds. Hand playtest and tuning still to do |
 | **Sun 1 Nov** (until 23:59 BDT) | P0 | Full playtests, bug fixes, Windows build, 30–60 s video, five-line note, submit |
 
 ### Cut order (if late)
