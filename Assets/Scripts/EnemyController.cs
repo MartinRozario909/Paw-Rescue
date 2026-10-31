@@ -31,6 +31,7 @@ public class EnemyController : MonoBehaviour, IResettable
     [SerializeField] private Collider bodyCollider;      // The solid body; the player lands on top of it to stomp
     [SerializeField] private Animator animator;
     [SerializeField] private Transform player;           // Found automatically if left empty
+    [SerializeField] private AudioSource stompSFX;
 
     [Header("Kick")]
     [SerializeField] private int damage = 1;
@@ -239,7 +240,7 @@ public class EnemyController : MonoBehaviour, IResettable
     private void Stomped(PetController pet)
     {
         pet.Bounce();
-        SoundManager.Play(Sound.Stomp);
+        if (stompSFX != null) stompSFX.Play();
 
         health--;
         if (health <= 0) Die();

@@ -12,6 +12,7 @@ public class ArenaWaves : MonoBehaviour, IResettable
     [SerializeField] private FinalGate gate;             // Shut behind the pet when the fight starts
     [SerializeField] private Transform respawnPoint;     // Falling off during the fight respawns the pet here
     [SerializeField] private ParticleSystem spawnEffect; // Played at each alien as its wave appears
+    [SerializeField] private AudioSource waveSFX;
     [SerializeField] private float timeBetweenWaves = 2f;
     [SerializeField] private float winDelay = 1.5f;      // Time to enjoy the last stomp before the Win screen
 
@@ -96,7 +97,7 @@ public class ArenaWaves : MonoBehaviour, IResettable
         }
 
         UIManager.Instance.ShowMessage($"Wave {index + 1}!");
-        SoundManager.Play(Sound.Wave);
+        if (waveSFX != null) waveSFX.Play();
         WaveChanged?.Invoke(currentWave + 1, waves.Length, aliensLeft);
     }
 

@@ -8,6 +8,7 @@ public class Spring : MonoBehaviour
     [SerializeField] private float bounceHeight = 6.5f; // Metres the pet rises above the spring
     [SerializeField] private Transform visual;          // Squashed for a moment on each bounce
     [SerializeField] private float squashTime = 0.25f;
+    [SerializeField] private AudioSource springSFX;
 
     private Collider solid;
     private Vector3 visualScale;
@@ -53,6 +54,6 @@ public class Spring : MonoBehaviour
 
         pet.Bounce(bounceHeight);
         squashTimer = squashTime;
-        SoundManager.Play(Sound.Spring);
+        if (springSFX != null) springSFX.Play();
     }
 }

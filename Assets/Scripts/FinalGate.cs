@@ -7,6 +7,7 @@ public class FinalGate : MonoBehaviour, IResettable
     [SerializeField] private Transform door;        // The part that moves
     [SerializeField] private Collider blocker;      // Tall invisible wall that stops the pet while shut
     [SerializeField] private GameObject lockedSign; // "Free 3 friends" sign, hidden once open
+    [SerializeField] private AudioSource gateSFX;
     [SerializeField] private float openDepth = 6f;  // How far the door sinks when open
     [SerializeField] private float moveSpeed = 4f;
 
@@ -49,7 +50,7 @@ public class FinalGate : MonoBehaviour, IResettable
         blocker.enabled = false;
         if (lockedSign != null) lockedSign.SetActive(false);
         UIManager.Instance.ShowMessage("The gate is open! Clear the Alien Camp!");
-        SoundManager.Play(Sound.Gate);
+        if (gateSFX != null) gateSFX.Play();
     }
 
     // Shut behind the pet when the camp fight starts
@@ -57,7 +58,7 @@ public class FinalGate : MonoBehaviour, IResettable
     {
         isOpen = false;
         blocker.enabled = true;
-        SoundManager.Play(Sound.Gate);
+        if (gateSFX != null) gateSFX.Play();
     }
 
     public void ResetRunState()

@@ -49,6 +49,9 @@ public class SpikeTrap : MonoBehaviour, IResettable
 
     public void ResetRunState()
     {
+        // A trap that was never switched on hasn't run Awake yet, so it is already as it started
+        if (hurtZone == null) return;
+
         timer = startDelay;
         Vector3 position = spikes.localPosition;
         position.y = inHeight;

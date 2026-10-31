@@ -564,10 +564,6 @@ public static class GameSceneBuilder
         so.FindProperty("collisionLayers").intValue = ~(1 << InvisibleWallLayer);
         so.ApplyModifiedPropertiesWithoutUndo();
         cameraFollow.transform.SetPositionAndRotation(new Vector3(0f, 5f, -14f), Quaternion.Euler(18f, 0f, 0f));
-
-        // Sounds live on the GameManager
-        GameManager game = Object.FindAnyObjectByType<GameManager>();
-        if (game.GetComponent<SoundManager>() == null) game.gameObject.AddComponent<SoundManager>();
     }
 
     // ---------------------------------------------------------------- UI

@@ -31,6 +31,7 @@ public class UIManager : MonoBehaviour, IResettable
     [SerializeField] private Button gameOverMenuButton;
     [SerializeField] private Button playAgainButton;
     [SerializeField] private Button winMenuButton;
+    [SerializeField] private AudioSource clickSFX;   // Played by every button above
 
     [Header("Coins")]
     [SerializeField] private Text coinText;
@@ -100,9 +101,16 @@ public class UIManager : MonoBehaviour, IResettable
     }
 
     // Buttons a scene doesn't have (like the older test scenes) are simply skipped
-    private static void Bind(Button button, UnityEngine.Events.UnityAction action)
+    private void Bind(Button button, UnityEngine.Events.UnityAction action)
     {
-        if (button != null) button.onClick.AddListener(action);
+        if (button == null) return;
+        button.onClick.AddListener(PlayClick);
+        button.onClick.AddListener(action);
+    }
+
+    private void PlayClick()
+    {
+        if (clickSFX != null) clickSFX.Play();
     }
 
     void OnDestroy()

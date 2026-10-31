@@ -21,6 +21,7 @@ public class PetController : MonoBehaviour, IResettable
     [SerializeField] private int maxJumps = 2;
     [SerializeField] private float groundCheckDepth = 0.1f;     // How far below the box still counts as standing
     [SerializeField] private Transform cameraTransform;
+    [SerializeField] private AudioSource jumpSFX;
 
     [Header("Enemies")]
     [SerializeField] private float knockbackDistance = 2.5f; // How far a hit pushes the pet away from the enemy
@@ -115,7 +116,7 @@ public class PetController : MonoBehaviour, IResettable
             jumpBufferTimer = 0f;
             IsGrounded = false;
             Jumped?.Invoke();
-            SoundManager.Play(Sound.Jump);
+            if (jumpSFX != null) jumpSFX.Play();
         }
         else if (jumpReleased && velocity.y > 0f)
         {

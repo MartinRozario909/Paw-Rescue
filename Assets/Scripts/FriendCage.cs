@@ -16,6 +16,8 @@ public class FriendCage : MonoBehaviour, IResettable
     [SerializeField] private Transform waitSpot;           // Where the friend waits after the celebration
     [SerializeField] private Text costLabel;               // World-space "10 COINS" sign above the cage
     [SerializeField] private ParticleSystem celebrateEffect;
+    [SerializeField] private AudioSource lockedSFX;
+    [SerializeField] private AudioSource rescueSFX;
 
     [Header("Celebration")]
     [SerializeField] private float celebrateTime = 2f;
@@ -90,7 +92,7 @@ public class FriendCage : MonoBehaviour, IResettable
         {
             nextHintTime = Time.time + hintCooldown;
             UIManager.Instance.ShowMessage($"Need {cost} coins to free {friendName}!");
-            SoundManager.Play(Sound.Locked);
+            if (lockedSFX != null) lockedSFX.Play();
         }
     }
 
@@ -105,7 +107,7 @@ public class FriendCage : MonoBehaviour, IResettable
         GameManager.Instance.RescueFriend(friendIndex);
         if (checkpoint != null) GameManager.Instance.SetCheckpoint(checkpoint.position);
         UIManager.Instance.ShowMessage($"{friendName} is free!");
-        SoundManager.Play(Sound.Rescue);
+        if (rescueSFX != null) rescueSFX.Play();
     }
 
     private void MoveFriendTo(Vector3 position)

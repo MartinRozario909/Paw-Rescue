@@ -17,6 +17,7 @@ public class Item : MonoBehaviour, IResettable
     [SerializeField] private int value = 1; // Coins added, or health restored
     [SerializeField] private Transform visual;
     [SerializeField] private ParticleSystem pickupEffect;
+    [SerializeField] private AudioSource pickupSFX; // Coin or Heart sound, to match the type
     [SerializeField] private float spinSpeed = 120f;  // Degrees per second
     [SerializeField] private float bobHeight = 0.15f;
     [SerializeField] private float bobSpeed = 3f;
@@ -56,7 +57,7 @@ public class Item : MonoBehaviour, IResettable
         visual.gameObject.SetActive(false);
         pickupCollider.enabled = false;
         if (pickupEffect != null) pickupEffect.Play();
-        SoundManager.Play(type == ItemType.Coin ? Sound.Coin : Sound.Heart);
+        if (pickupSFX != null) pickupSFX.Play();
     }
 
     public void ResetRunState()

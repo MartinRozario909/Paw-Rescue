@@ -8,6 +8,7 @@ public class HealthSystem : MonoBehaviour, IResettable
     [SerializeField] private int maxHealth = 3;
     [SerializeField] private float invulnerableTime = 1.5f; // After a hit, can't be hurt again for this long
     [SerializeField] private bool isInvincible;            // Tick to take no damage at all (for testing)
+    [SerializeField] private AudioSource hurtSFX;
 
     [Header("Flashing")]
     [SerializeField] private float flashInterval = 0.1f;  // Blinks off and on this often during the safe time
@@ -65,7 +66,7 @@ public class HealthSystem : MonoBehaviour, IResettable
         CurrentHealth = Mathf.Max(CurrentHealth - amount, 0);
         invulnerableTimer = invulnerableTime;
         HealthChanged?.Invoke(CurrentHealth, maxHealth);
-        SoundManager.Play(Sound.Hurt);
+        if (hurtSFX != null) hurtSFX.Play();
 
         if (IsDead) Died?.Invoke();
         return true;

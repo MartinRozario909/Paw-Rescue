@@ -21,6 +21,8 @@ public class GameManager : MonoBehaviour
     [SerializeField] private PetController player;
     [SerializeField] private float killHeight = -15f; // Falling below this costs a heart
     [SerializeField] private int friendsToRescue = 3;  // The final gate opens once this many are free
+    [SerializeField] private AudioSource winSFX;
+    [SerializeField] private AudioSource loseSFX;
 
     private HealthSystem playerHealth;
     private PetAnimationController playerAnimation;
@@ -171,8 +173,8 @@ public class GameManager : MonoBehaviour
             if (newState == GameState.Won) playerAnimation.PlayWin();
             else if (newState == GameState.GameOver) playerAnimation.PlayLose();
         }
-        if (newState == GameState.Won) SoundManager.Play(Sound.Win);
-        else if (newState == GameState.GameOver) SoundManager.Play(Sound.Lose);
+        if (newState == GameState.Won && winSFX != null) winSFX.Play();
+        else if (newState == GameState.GameOver && loseSFX != null) loseSFX.Play();
 
         StateChanged?.Invoke(newState);
     }
