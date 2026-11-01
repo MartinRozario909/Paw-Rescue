@@ -54,7 +54,8 @@ public class Item : MonoBehaviour, IResettable
         if (IsCollected) return;
 
         IsCollected = true;
-        visual.gameObject.SetActive(false);
+        // visual.gameObject.SetActive(false);
+        gameObject.SetActive(false);
         pickupCollider.enabled = false;
         if (pickupEffect != null) pickupEffect.Play();
         if (pickupSFX != null) pickupSFX.Play();
