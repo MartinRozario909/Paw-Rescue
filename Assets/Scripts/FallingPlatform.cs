@@ -11,6 +11,8 @@ public class FallingPlatform : MonoBehaviour, IResettable
     [SerializeField] private float shakeAmount = 0.08f;
     [SerializeField] private float fallAcceleration = 20f;
     [SerializeField] private float hideAfterDrop = 15f; // Metres fallen before it is hidden
+    [SerializeField] private bool comeBack = true;      // Untick to keep it gone until Retry
+    [SerializeField] private float comeBackDelay = 3f;  // Seconds after it is hidden before it is back in place
 
     private Rigidbody rb;
     private Collider solid;
@@ -19,6 +21,7 @@ public class FallingPlatform : MonoBehaviour, IResettable
     private bool triggered;
     private float shakeTimer;
     private float fallSpeed;
+    private float comeBackTimer;
 
     void Awake()
     {
@@ -33,8 +36,17 @@ public class FallingPlatform : MonoBehaviour, IResettable
     // Physics movement happens in FixedUpdate, in step with the Rigidbody
     void FixedUpdate()
     {
-        if (!triggered) return;
         float dt = Time.fixedDeltaTime;
+
+        // Waiting to come back after falling away
+        if (comeBackTimer > 0f)
+        {
+            comeBackTimer -= dt;
+            if (comeBackTimer <= 0f) ResetRunState();
+            return;
+        }
+
+        if (!triggered) return;
 
         if (shakeTimer > 0f)
         {
@@ -52,6 +64,7 @@ public class FallingPlatform : MonoBehaviour, IResettable
             visual.gameObject.SetActive(false);
             solid.enabled = false;
             triggered = false;
+            if (comeBack) comeBackTimer = comeBackDelay;
         }
     }
 
@@ -73,6 +86,7 @@ public class FallingPlatform : MonoBehaviour, IResettable
         triggered = false;
         shakeTimer = 0f;
         fallSpeed = 0f;
+        comeBackTimer = 0f;
         rb.position = startPosition;
         transform.position = startPosition;
         visual.localPosition = visualStart;

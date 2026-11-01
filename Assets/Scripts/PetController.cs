@@ -23,6 +23,7 @@ public class PetController : MonoBehaviour, IResettable
     [SerializeField] private Transform cameraTransform;
     [SerializeField] private AudioSource jumpSFX;
     [SerializeField] private JoystickController joystick; // On-screen stick, used on mobile
+    [SerializeField] private JumpButton jumpButton;       // On-screen jump button, used on mobile
 
     [Header("Enemies")]
     [SerializeField] private float knockbackDistance = 2.5f; // How far a hit pushes the pet away from the enemy
@@ -145,6 +146,9 @@ public class PetController : MonoBehaviour, IResettable
 
         // On-screen joystick (mobile only); Keyboard.current is usually null on phones
         if (joystick != null && joystick.isActiveAndEnabled) moveInput += joystick.Value;
+
+        // On-screen jump button (mobile only); kept until the next FixedUpdate like Space
+        if (jumpButton != null && jumpButton.ConsumePress()) jumpBufferTimer = jumpBufferTime;
 
         Keyboard keyboard = Keyboard.current;
         if (keyboard == null) return;
