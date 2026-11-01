@@ -64,6 +64,7 @@ public class Item : MonoBehaviour, IResettable
     public void ResetRunState()
     {
         IsCollected = false;
+        gameObject.SetActive(true); // Collect() hides the whole item
         visual.gameObject.SetActive(true);
         visual.localPosition = visualStartPosition;
         pickupCollider.enabled = true;

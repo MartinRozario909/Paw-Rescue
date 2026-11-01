@@ -22,6 +22,7 @@ public class PetController : MonoBehaviour, IResettable
     [SerializeField] private float groundCheckDepth = 0.1f;     // How far below the box still counts as standing
     [SerializeField] private Transform cameraTransform;
     [SerializeField] private AudioSource jumpSFX;
+    [SerializeField] private JoystickController joystick; // On-screen stick, used on mobile
 
     [Header("Enemies")]
     [SerializeField] private float knockbackDistance = 2.5f; // How far a hit pushes the pet away from the enemy
@@ -140,9 +141,13 @@ public class PetController : MonoBehaviour, IResettable
     private void ReadInput()
     {
         moveInput = Vector2.zero;
+        if (!InputEnabled) return;
+
+        // On-screen joystick (mobile only); Keyboard.current is usually null on phones
+        if (joystick != null && joystick.isActiveAndEnabled) moveInput += joystick.Value;
 
         Keyboard keyboard = Keyboard.current;
-        if (keyboard == null || !InputEnabled) return;
+        if (keyboard == null) return;
 
         // Arrow keys are reserved for rotating the camera
         if (keyboard.aKey.isPressed) moveInput.x -= 1f;

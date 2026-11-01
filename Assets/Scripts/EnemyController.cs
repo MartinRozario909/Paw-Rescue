@@ -92,6 +92,8 @@ public class EnemyController : MonoBehaviour, IResettable
         rb.interpolation = RigidbodyInterpolation.Interpolate;
 
         if (animator == null) animator = GetComponentInChildren<Animator>();
+        // Hiding the dead body puts it back in its standing pose, so Retry doesn't bring it back squashed
+        animator.writeDefaultValuesOnDisable = true;
         if (bodyCollider == null) bodyCollider = GetComponent<Collider>();
         attackCollider.isTrigger = true;
         attackCollider.enabled = false; // Only switched on during the kick
@@ -398,9 +400,11 @@ public class EnemyController : MonoBehaviour, IResettable
         cooldownTimer = 0f;
         attackCollider.enabled = false;
 
-        // A switched-off Animator restarts by itself when it is switched back on
+        // Back to the standing pose first (the body may still be mid-death), then restart the Animator.
+        // Rebind alone would keep whatever pose the body is in as its new default.
         if (animator.isActiveAndEnabled)
         {
+            animator.WriteDefaultValues();
             animator.Rebind();
             animator.Update(0f);
         }
