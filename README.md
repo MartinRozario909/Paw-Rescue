@@ -44,7 +44,7 @@ Tuning values to try live: `PetController` (run speed, jump height, max jumps), 
 - Game feel (camera, coin bob, dust trail, falling platform, sound pool) was modelled on Kenney's [Starter Kit 3D Platformer](https://github.com/KenneyNL/Starter-Kit-3D-Platformer) (MIT). It was reimplemented in C#; no code was copied.
 
 ## AI use
-Claude (Anthropic) helped plan the design and wrote most of the C# and the level builder through Claude Code, under my direction. I reviewed the code and tested it in the Unity Editor.
+Claude helped plan the design and wrote most of the C#. I reviewed the code and tested it in the Unity Editor.
 
 ## Tested
 - Unity Editor Play Mode on Windows 11.

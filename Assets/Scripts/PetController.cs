@@ -221,11 +221,11 @@ public class PetController : MonoBehaviour, IResettable
     // Put the pet back at the start, standing still (used after a fall)
     public void Respawn()
     {
-        Respawn(startPosition);
+        RespawnWithCheckPoint(startPosition);
     }
 
     // Put the pet back at a checkpoint, standing still and facing the way it started
-    public void Respawn(Vector3 position)
+    public void RespawnWithCheckPoint(Vector3 position)
     {
         knockbackTimer = 0f;
         platformVelocity = Vector3.zero;

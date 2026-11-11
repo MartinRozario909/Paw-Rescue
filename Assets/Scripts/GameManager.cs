@@ -80,7 +80,7 @@ public class GameManager : MonoBehaviour
         // If that was the last heart, OnPlayerDied has already ended the game
         if (IsPlaying)
         {
-            if (hasCheckpoint) player.Respawn(checkpoint);
+            if (hasCheckpoint) player.RespawnWithCheckPoint(checkpoint);
             else player.Respawn();
         }
     }
